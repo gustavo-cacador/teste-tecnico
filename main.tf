@@ -94,6 +94,14 @@ resource "aws_security_group" "secure_sg" {
     cidr_blocks = [var.meu_ip]
   }
 
+  ingress {
+    description = "Permitir acesso HTTP (Nginx)"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     description = "Permitir apenas tráfego de saída essencial"
     from_port   = 443
@@ -129,7 +137,7 @@ resource "aws_instance" "debian_ec2" {
   subnet_id       = aws_subnet.main_subnet.id
   key_name        = aws_key_pair.ec2_key_pair.key_name
   security_groups = [aws_security_group.secure_sg.name]
-  
+
   root_block_device {
     volume_size           = 20
     volume_type           = "gp2"
@@ -141,6 +149,9 @@ resource "aws_instance" "debian_ec2" {
               #!/bin/bash
               apt-get update -y
               apt-get upgrade -y
+              apt-get install -y nginx
+              systemctl enable nginx
+              systemctl start nginx
               EOF
 
   tags = {
