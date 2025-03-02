@@ -14,9 +14,20 @@ variable "candidato" {
   default     = "SeuNome"
 }
 
+variable "meu_ip" {
+  description = "Seu IP para acesso SSH (Exemplo: 192.168.1.1/32)"
+  type        = string
+}
+
 resource "tls_private_key" "ec2_key" {
   algorithm = "RSA"
   rsa_bits  = 2048
+}
+
+resource "local_file" "private_key" {
+  content  = tls_private_key.ec2_key.private_key_pem
+  filename = "${path.module}/ec2_key.pem"
+  file_permission = "0600"
 }
 
 resource "aws_key_pair" "ec2_key_pair" {
@@ -68,39 +79,31 @@ resource "aws_route_table" "main_route_table" {
 resource "aws_route_table_association" "main_association" {
   subnet_id      = aws_subnet.main_subnet.id
   route_table_id = aws_route_table.main_route_table.id
-
-  tags = {
-    Name = "${var.projeto}-${var.candidato}-route_table_association"
-  }
 }
 
-resource "aws_security_group" "main_sg" {
+resource "aws_security_group" "secure_sg" {
   name        = "${var.projeto}-${var.candidato}-sg"
-  description = "Permitir SSH de qualquer lugar e todo o tráfego de saída"
+  description = "Regras de segurança aprimoradas"
   vpc_id      = aws_vpc.main_vpc.id
 
-  # Regras de entrada
   ingress {
-    description      = "Allow SSH from anywhere"
-    from_port        = 22
-    to_port          = 22
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    description = "Permitir SSH apenas do IP especificado"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.meu_ip]
   }
 
-  # Regras de saída
   egress {
-    description      = "Allow all outbound traffic"
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    description = "Permitir apenas tráfego de saída essencial"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
-    Name = "${var.projeto}-${var.candidato}-sg"
+    Name = "${var.projeto}-${var.candidato}-secure_sg"
   }
 }
 
@@ -125,14 +128,13 @@ resource "aws_instance" "debian_ec2" {
   instance_type   = "t2.micro"
   subnet_id       = aws_subnet.main_subnet.id
   key_name        = aws_key_pair.ec2_key_pair.key_name
-  security_groups = [aws_security_group.main_sg.name]
-
-  associate_public_ip_address = true
-
+  security_groups = [aws_security_group.secure_sg.name]
+  
   root_block_device {
     volume_size           = 20
     volume_type           = "gp2"
     delete_on_termination = true
+    encrypted             = true
   }
 
   user_data = <<-EOF
@@ -144,12 +146,6 @@ resource "aws_instance" "debian_ec2" {
   tags = {
     Name = "${var.projeto}-${var.candidato}-ec2"
   }
-}
-
-output "private_key" {
-  description = "Chave privada para acessar a instância EC2"
-  value       = tls_private_key.ec2_key.private_key_pem
-  sensitive   = true
 }
 
 output "ec2_public_ip" {
