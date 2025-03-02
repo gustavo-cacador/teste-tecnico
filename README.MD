@@ -1,4 +1,4 @@
-Descrição Técnica: 
+Descrição Técnica Tarefa 1: 
 
 Provider - Configura o provedor AWS para a região us-east-1
 
@@ -58,7 +58,7 @@ O código usa uma boa prática de nomenclatura consistente com variáveis para p
 
 Para projetos maiores, considerar dividir o código em múltiplos arquivos .tf para melhor organização.
 
-Descrição Técnica de alteração: 
+Descrição Técnica de alteração Tarefa 2: 
 
 A alteração no código Terraform foi realizada para automatizar a instalação e execução do servidor web Nginx na instância EC2 logo após sua criação. Além disso, foram aplicadas melhorias de segurança, incluindo a liberação da porta 80 para tráfego HTTP e a criptografia do volume de armazenamento da instância.
 
@@ -105,6 +105,18 @@ Conclusão:
 
 Com essa modificação, a infraestrutura provisionada com Terraform cria automaticamente um servidor web seguro e funcional na AWS. O uso do User Data simplifica o processo de configuração da instância EC2, garantindo que ela esteja pronta para uso assim que for iniciada.
 
+
+Outras melhorias:
+
+Instalação Automática do Nginx → EC2 inicia com Nginx rodando.
+
+Restrições no Security Group → SSH liberado somente para IP específico.
+
+Backup Automático → Criado um backup diário da instância com AWS Backup.
+
+Monitoramento → Criado CloudWatch Logs para armazenar logs do Nginx.
+
+Código mais organizado → Melhores práticas de Terraform.
 
 
 

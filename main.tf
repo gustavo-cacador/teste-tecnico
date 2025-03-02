@@ -2,164 +2,179 @@ provider "aws" {
   region = "us-east-1"
 }
 
+# Variáveis para nomeação dos recursos
 variable "projeto" {
-  description = "Nome do projeto"
-  type        = string
-  default     = "VExpenses"
+  default = "infra-aws"
 }
 
 variable "candidato" {
-  description = "Nome do candidato"
-  type        = string
-  default     = "SeuNome"
+  default = "meu-estagio"
 }
 
-variable "meu_ip" {
-  description = "Seu IP para acesso SSH (Exemplo: 192.168.1.1/32)"
-  type        = string
-}
-
-resource "tls_private_key" "ec2_key" {
+# Criar uma Key Pair para SSH
+resource "tls_private_key" "ssh_key" {
   algorithm = "RSA"
   rsa_bits  = 2048
 }
 
-resource "local_file" "private_key" {
-  content  = tls_private_key.ec2_key.private_key_pem
-  filename = "${path.module}/ec2_key.pem"
-  file_permission = "0600"
+resource "aws_key_pair" "debian_key" {
+  key_name   = "${var.projeto}-key"
+  public_key = tls_private_key.ssh_key.public_key_openssh
 }
 
-resource "aws_key_pair" "ec2_key_pair" {
-  key_name   = "${var.projeto}-${var.candidato}-key"
-  public_key = tls_private_key.ec2_key.public_key_openssh
-}
-
-resource "aws_vpc" "main_vpc" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_support   = true
-  enable_dns_hostnames = true
+# Criar uma VPC
+resource "aws_vpc" "main" {
+  cidr_block = "10.0.0.0/16"
 
   tags = {
-    Name = "${var.projeto}-${var.candidato}-vpc"
+    Name = "${var.projeto}-vpc"
   }
 }
 
-resource "aws_subnet" "main_subnet" {
-  vpc_id            = aws_vpc.main_vpc.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "us-east-1a"
+# Criar uma Subnet pública
+resource "aws_subnet" "public_subnet" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+  availability_zone       = "us-east-1a"
 
   tags = {
-    Name = "${var.projeto}-${var.candidato}-subnet"
+    Name = "${var.projeto}-subnet"
   }
 }
 
-resource "aws_internet_gateway" "main_igw" {
-  vpc_id = aws_vpc.main_vpc.id
+# Criar um Internet Gateway e anexá-lo à VPC
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "${var.projeto}-${var.candidato}-igw"
+    Name = "${var.projeto}-igw"
   }
 }
 
-resource "aws_route_table" "main_route_table" {
-  vpc_id = aws_vpc.main_vpc.id
+# Criar uma tabela de rotas para permitir acesso à internet
+resource "aws_route_table" "route_table" {
+  vpc_id = aws_vpc.main.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main_igw.id
+    gateway_id = aws_internet_gateway.gw.id
   }
 
   tags = {
-    Name = "${var.projeto}-${var.candidato}-route_table"
+    Name = "${var.projeto}-route-table"
   }
 }
 
-resource "aws_route_table_association" "main_association" {
-  subnet_id      = aws_subnet.main_subnet.id
-  route_table_id = aws_route_table.main_route_table.id
+# Associar a tabela de rotas à Subnet
+resource "aws_route_table_association" "route_assoc" {
+  subnet_id      = aws_subnet.public_subnet.id
+  route_table_id = aws_route_table.route_table.id
 }
 
-resource "aws_security_group" "secure_sg" {
-  name        = "${var.projeto}-${var.candidato}-sg"
-  description = "Regras de segurança aprimoradas"
-  vpc_id      = aws_vpc.main_vpc.id
+# Criar um Security Group mais seguro
+resource "aws_security_group" "sg" {
+  vpc_id = aws_vpc.main.id
 
+  # Permitir acesso SSH apenas de um IP específico (modifique para seu IP)
   ingress {
-    description = "Permitir SSH apenas do IP especificado"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [var.meu_ip]
+    cidr_blocks = ["MEU_IP/32"] # Altere para seu IP
   }
 
+  # Permitir tráfego HTTP para Nginx
   ingress {
-    description = "Permitir acesso HTTP (Nginx)"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  egress {
-    description = "Permitir apenas tráfego de saída essencial"
+  # Permitir tráfego HTTPS (caso instale SSL depois)
+  ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Permitir todo tráfego de saída
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   tags = {
-    Name = "${var.projeto}-${var.candidato}-secure_sg"
+    Name = "${var.projeto}-sg"
   }
 }
 
-data "aws_ami" "debian12" {
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["debian-12-amd64-*"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  owners = ["679593333241"]
-}
-
-resource "aws_instance" "debian_ec2" {
-  ami             = data.aws_ami.debian12.id
-  instance_type   = "t2.micro"
-  subnet_id       = aws_subnet.main_subnet.id
-  key_name        = aws_key_pair.ec2_key_pair.key_name
-  security_groups = [aws_security_group.secure_sg.name]
-
-  root_block_device {
-    volume_size           = 20
-    volume_type           = "gp2"
-    delete_on_termination = true
-    encrypted             = true
-  }
+# Criar uma instância EC2 com Debian e Nginx instalado automaticamente
+resource "aws_instance" "web" {
+  ami                         = "ami-04b70fa74e45c3917" # Debian 12
+  instance_type               = "t2.micro"
+  subnet_id                   = aws_subnet.public_subnet.id
+  vpc_security_group_ids      = [aws_security_group.sg.id]
+  associate_public_ip_address = true
+  key_name                    = aws_key_pair.debian_key.key_name
 
   user_data = <<-EOF
-              #!/bin/bash
-              apt-get update -y
-              apt-get upgrade -y
-              apt-get install -y nginx
-              systemctl enable nginx
-              systemctl start nginx
-              EOF
+    #!/bin/bash
+    apt update -y
+    apt install -y nginx
+    systemctl enable nginx
+    systemctl start nginx
+  EOF
 
   tags = {
-    Name = "${var.projeto}-${var.candidato}-ec2"
+    Name = "${var.projeto}-instance"
   }
 }
 
-output "ec2_public_ip" {
-  description = "Endereço IP público da instância EC2"
-  value       = aws_instance.debian_ec2.public_ip
+# Criar um CloudWatch Log Group para logs do sistema
+resource "aws_cloudwatch_log_group" "nginx_logs" {
+  name = "/var/log/nginx/access.log"
+
+  retention_in_days = 7
+}
+
+# Configuração de um snapshot automático da instância (backup)
+resource "aws_backup_vault" "backup_vault" {
+  name = "${var.projeto}-backup"
+}
+
+resource "aws_backup_plan" "backup_plan" {
+  name = "${var.projeto}-backup-plan"
+
+  rule {
+    rule_name         = "daily-backup"
+    target_vault_name = aws_backup_vault.backup_vault.name
+    schedule          = "cron(0 12 * * ? *)"  # Faz backup todos os dias ao meio-dia
+
+    lifecycle {
+      delete_after = 30  # Mantém backups por 30 dias
+    }
+  }
+}
+
+resource "aws_backup_selection" "backup_selection" {
+  name         = "daily-backup-selection"
+  iam_role_arn = "arn:aws:iam::YOUR_ACCOUNT_ID:role/service-role/AWSBackupDefaultServiceRole"
+  plan_id      = aws_backup_plan.backup_plan.id
+
+  resources = [aws_instance.web.arn]
+}
+
+# Saídas importantes
+output "public_ip" {
+  value = aws_instance.web.public_ip
+}
+
+output "private_key" {
+  value     = tls_private_key.ssh_key.private_key_pem
+  sensitive = true
 }
