@@ -58,6 +58,55 @@ O código usa uma boa prática de nomenclatura consistente com variáveis para p
 
 Para projetos maiores, considerar dividir o código em múltiplos arquivos .tf para melhor organização.
 
+Descrição Técnica de alteração: 
+
+A alteração no código Terraform foi realizada para automatizar a instalação e execução do servidor web Nginx na instância EC2 logo após sua criação. Além disso, foram aplicadas melhorias de segurança, incluindo a liberação da porta 80 para tráfego HTTP e a criptografia do volume de armazenamento da instância.
+
+
+Automação da Instalação e Inicialização do Nginx
+
+O script User Data foi modificado para incluir comandos que:
+Atualizam e atualizam os pacotes do sistema (apt-get update -y e apt-get upgrade -y).
+Instalam o servidor Nginx (apt-get install -y nginx).
+Habilitam o serviço para iniciar automaticamente em reinicializações (systemctl enable nginx).
+Iniciam o serviço imediatamente (systemctl start nginx).
+Resultado esperado: Assim que a instância for criada, o Nginx será instalado e iniciado automaticamente, permitindo o acesso à sua página padrão através do IP público da instância.
+
+Configuração de Segurança Aprimorada
+
+O Security Group foi modificado para permitir conexões na porta 80 (HTTP), garantindo que a instância possa servir páginas web acessíveis publicamente.
+O volume raiz da instância (root_block_device) foi atualizado para ter criptografia ativada (encrypted = true), garantindo a segurança dos dados armazenados.
+Resultado esperado:
+
+A instância estará mais segura, permitindo apenas o tráfego essencial e protegendo os dados armazenados.
+Qualquer tentativa de acesso ao servidor via HTTP será permitida, possibilitando a visualização do Nginx no navegador.
+
+Testes e Validação
+
+Após a criação da infraestrutura, a funcionalidade pode ser validada seguindo os passos abaixo:
+
+Verificar se o Nginx está rodando:
+
+Acessar http://<IP_PUBLICO> no navegador e confirmar se a página padrão do Nginx é exibida.
+
+Testar conectividade SSH:
+
+Conectar via SSH na instância (ssh -i minha_chave.pem usuario@<IP_PUBLICO>) e executar systemctl status nginx para confirmar que o serviço está ativo.
+
+Verificar regras de segurança:
+
+Validar as regras do Security Group para garantir que apenas as portas necessárias estão abertas.
+
+Conferir criptografia do volume:
+
+No console da AWS, acessar EC2 → Volumes e verificar que o volume de armazenamento está criptografado.
+
+Conclusão:
+
+Com essa modificação, a infraestrutura provisionada com Terraform cria automaticamente um servidor web seguro e funcional na AWS. O uso do User Data simplifica o processo de configuração da instância EC2, garantindo que ela esteja pronta para uso assim que for iniciada.
+
+
+
 
 
 
