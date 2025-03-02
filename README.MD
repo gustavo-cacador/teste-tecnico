@@ -1,127 +1,174 @@
-Descrição Técnica Tarefa 1: 
+# 🚀 Infraestrutura AWS com Terraform
 
-Provider - Configura o provedor AWS para a região us-east-1
+## 📌 Visão Geral
+Este projeto utiliza **Terraform** para provisionar uma infraestrutura básica na AWS, incluindo uma instância **EC2** configurada automaticamente para rodar o servidor **Nginx**.
 
-Variáveis - Define duas variáveis "projeto" (define o nome do projeto) e "candidato" (representa o nome do candidato)
+---
 
-Key Pair - Cria uma chave RSA e um par de chaves EC2 associado
+## 📜 **Descrição Técnica**
 
-VPC - cria uma VPC com rede privada com CIDR 10.0.0.0/16
+### 🏗 **Tarefa 1: Infraestrutura AWS**
 
-Subnet - Sub-rede dentro da VPC com CIDR 10.0.1.0/24 na zona us-east-1a.
+🔹 **Provider**: Configura o provedor AWS para a região `us-east-1`.
 
-Internet Gateway - Cria e associa um Internet Gateway à VPC
+🔹 **Variáveis**: Define variáveis para o nome do projeto e do candidato.
 
-Route Table - Direciona tráfego externo para o Internet Gateway, configura uma tabela de rotas para permitir tráfego de internet
+🔹 **Key Pair**: Cria um par de chaves SSH para acessar a instância.
 
-Route Table Association - Liga a tabela de rotas à subnet
+🔹 **VPC**: Cria uma rede privada (`10.0.0.0/16`).
 
-Security Group - Permite SSH (porta 22) de qualquer IP e libera todo o tráfego de saída
+🔹 **Subnet**: Define uma sub-rede (`10.0.1.0/24`) na zona `us-east-1a`.
 
-Instância EC2 - AMI mais recente do Debian 12, Tipo t2.micro, 20GB de armazenamento GP2, Associada à subnet criada, Configurada com a chave SSH, Script de inicialização (user_data) para atualizar o sistema.
-Além disso, há outputs: 
-private_key: Chave privada gerada (sensível), ec2_public_ip: Endereço IP público da instância
+🔹 **Internet Gateway**: Permite acesso à internet.
 
-Observações Adicionais:
+🔹 **Route Table**: Configura rotas para saída via `Internet Gateway`.
 
-Boas práticas de segurança:
+🔹 **Security Group**: Permite tráfego SSH (`22`) e libera todo tráfego de saída.
 
-O security group permite SSH (porta 22) de qualquer lugar (0.0.0.0/0). Em um ambiente de produção, seria mais seguro limitar o acesso SSH a IPs ou ranges específicos.
+🔹 **Instância EC2**:
+  - AMI mais recente do **Debian 12**.
+  - Tipo **t2.micro**.
+  - 20GB de armazenamento **GP2**.
+  - Configuração da chave SSH.
+  - Script de inicialização (`user_data`) para atualização do sistema.
+  - 
+🔹 **Outputs**:
+  - `private_key`: Chave privada gerada (**sensível**).
+  - `ec2_public_ip`: IP público da instância.
 
-A chave privada é exposta como um output. Embora marcada como sensível, é uma prática que deve ser usada com cautela, especialmente em ambientes de produção.
+## Observações Adicionais:
 
-Gerenciamento de estado:
+### Boas práticas de segurança:
 
-O código não especifica um backend para armazenamento do estado do Terraform. Em um cenário de equipe ou produção, seria recomendável usar um backend remoto como S3 com DynamoDB para lock.
+- O security group permite SSH (porta 22) de qualquer lugar (0.0.0.0/0). Em um ambiente de produção, seria mais seguro limitar o acesso SSH a IPs ou ranges específicos.
 
-Flexibilidade e reutilização:
+- A chave privada é exposta como um output. Embora marcada como sensível, é uma prática que deve ser usada com cautela, especialmente em ambientes de produção.
 
-Mais variáveis poderiam ser utilizadas para tornar o código mais flexível, como CIDR blocks, tipo de instância, etc.
+- Gerenciamento de estado:
 
-Considerar o uso de módulos para componentes reutilizáveis como VPC, que poderiam ser compartilhados entre diferentes projetos.
+- O código não especifica um backend para armazenamento do estado do Terraform. Em um cenário de equipe ou produção, seria recomendável usar um backend remoto como S3 com DynamoDB para lock.
 
-Resiliência e alta disponibilidade:
+### Flexibilidade e reutilização:
 
-A infraestrutura está limitada a uma única zona de disponibilidade. Para maior resiliência, considerar usar múltiplas AZs.
+- Mais variáveis poderiam ser utilizadas para tornar o código mais flexível, como CIDR blocks, tipo de instância, etc.
 
-Custos e otimização:
+- Considerar o uso de módulos para componentes reutilizáveis como VPC, que poderiam ser compartilhados entre diferentes projetos.
 
-A instância t2.micro é boa para testes, mas para um ambiente de produção, seria importante avaliar as necessidades de performance e custo.
+### Resiliência e alta disponibilidade:
 
-Manutenção e atualizações:
+- A infraestrutura está limitada a uma única zona de disponibilidade. Para maior resiliência, considerar usar múltiplas AZs.
 
-O user data realiza uma atualização do sistema, o que é bom. Considerar adicionar mais passos de configuração ou usar uma ferramenta de gerenciamento de configuração para setups mais complexos.
+### Custos e otimização:
 
-Nomenclatura e organização:
+- A instância t2.micro é boa para testes, mas para um ambiente de produção, seria importante avaliar as necessidades de performance e custo.
 
-O código usa uma boa prática de nomenclatura consistente com variáveis para projeto e candidato.
+### Manutenção e atualizações:
 
-Para projetos maiores, considerar dividir o código em múltiplos arquivos .tf para melhor organização.
+- O user data realiza uma atualização do sistema, o que é bom. Considerar adicionar mais passos de configuração ou usar uma ferramenta de gerenciamento de configuração para setups mais complexos.
 
-Descrição Técnica de alteração Tarefa 2: 
+### Nomenclatura e organização:
 
-A alteração no código Terraform foi realizada para automatizar a instalação e execução do servidor web Nginx na instância EC2 logo após sua criação. Além disso, foram aplicadas melhorias de segurança, incluindo a liberação da porta 80 para tráfego HTTP e a criptografia do volume de armazenamento da instância.
+- O código usa uma boa prática de nomenclatura consistente com variáveis para projeto e candidato.
 
+- Para projetos maiores, considerar dividir o código em múltiplos arquivos .tf para melhor organização.
 
-Automação da Instalação e Inicialização do Nginx
+### 🔧 **Tarefa 2: Melhorias Aplicadas**
 
-O script User Data foi modificado para incluir comandos que:
-Atualizam e atualizam os pacotes do sistema (apt-get update -y e apt-get upgrade -y).
-Instalam o servidor Nginx (apt-get install -y nginx).
-Habilitam o serviço para iniciar automaticamente em reinicializações (systemctl enable nginx).
-Iniciam o serviço imediatamente (systemctl start nginx).
-Resultado esperado: Assim que a instância for criada, o Nginx será instalado e iniciado automaticamente, permitindo o acesso à sua página padrão através do IP público da instância.
+#### 🖥️ **Automação da Instalação e Inicialização do Nginx**
+✅ O **User Data** foi atualizado para:
+  - Atualizar pacotes (`apt-get update -y && apt-get upgrade -y`).
+  - Instalar o **Nginx** (`apt-get install -y nginx`).
+  - Habilitar **inicialização automática** (`systemctl enable nginx`).
+  - Iniciar o serviço (`systemctl start nginx`).
 
-Configuração de Segurança Aprimorada
+✅ **Resultado esperado**: O **Nginx** será instalado e iniciado automaticamente, permitindo acesso via **IP público** da instância.
 
-O Security Group foi modificado para permitir conexões na porta 80 (HTTP), garantindo que a instância possa servir páginas web acessíveis publicamente.
-O volume raiz da instância (root_block_device) foi atualizado para ter criptografia ativada (encrypted = true), garantindo a segurança dos dados armazenados.
-Resultado esperado:
+#### 🔒 **Segurança Aprimorada**
+✅ **Security Group** atualizado:
+  - Liberação da porta **80** para acesso HTTP.
+  - Restrições no **SSH** (acesso apenas para IPs específicos).
+✅ **Criptografia** ativada no volume de armazenamento da instância.
 
-A instância estará mais segura, permitindo apenas o tráfego essencial e protegendo os dados armazenados.
-Qualquer tentativa de acesso ao servidor via HTTP será permitida, possibilitando a visualização do Nginx no navegador.
+✅ **Resultado esperado**:
+  - Acesso HTTP permitido (Nginx visível no navegador).
+  - Maior proteção dos dados armazenados.
 
-Testes e Validação
+#### 🔍 **Outras Melhorias**
+✅ **Backup Automático**: AWS Backup configurado para snapshots diários.
+✅ **Monitoramento**: Configuração de logs do **Nginx** no **CloudWatch Logs**.
+✅ **Código mais organizado**: Segue boas práticas do Terraform.
 
-Após a criação da infraestrutura, a funcionalidade pode ser validada seguindo os passos abaixo:
+---
 
-Verificar se o Nginx está rodando:
+## 📖 **Instruções de Uso**
 
-Acessar http://<IP_PUBLICO> no navegador e confirmar se a página padrão do Nginx é exibida.
+### 1️⃣ **Pré-requisitos**
 
-Testar conectividade SSH:
+Antes de executar o código, certifique-se de ter:
+- ✅ **Conta AWS** configurada corretamente.
+- ✅ **AWS CLI** instalada e autenticada (`aws configure`).
+- ✅ **Terraform** instalado (`terraform -v` para verificar).
+- ✅ **IP PÚBLICO** do seu computador (para liberar SSH, edite `MEU_IP/32`).
 
-Conectar via SSH na instância (ssh -i minha_chave.pem usuario@<IP_PUBLICO>) e executar systemctl status nginx para confirmar que o serviço está ativo.
+### 2️⃣ **Passos para Executar o Terraform**
 
-Verificar regras de segurança:
+#### 📌 **Passo 1 – Configurar as Credenciais AWS**
+```sh
+aws configure
+```
+Insira a **Access Key, Secret Key, Região e Formato de saída**.
 
-Validar as regras do Security Group para garantir que apenas as portas necessárias estão abertas.
+#### 📌 **Passo 2 – Inicializar o Terraform**
+```sh
+terraform init
+```
+Isso inicializa o Terraform e baixa os provedores necessários.
 
-Conferir criptografia do volume:
+#### 📌 **Passo 3 – Validar a Configuração**
+```sh
+terraform validate
+```
+Verifica se há erros antes da aplicação.
 
-No console da AWS, acessar EC2 → Volumes e verificar que o volume de armazenamento está criptografado.
+#### 📌 **Passo 4 – Visualizar as Mudanças**
+```sh
+terraform plan
+```
+Exibe o que será criado antes da execução.
 
-Conclusão:
+#### 📌 **Passo 5 – Aplicar a Infraestrutura**
+```sh
+terraform apply -auto-approve
+```
+Cria os recursos na AWS.
 
-Com essa modificação, a infraestrutura provisionada com Terraform cria automaticamente um servidor web seguro e funcional na AWS. O uso do User Data simplifica o processo de configuração da instância EC2, garantindo que ela esteja pronta para uso assim que for iniciada.
+#### 📌 **Passo 6 – Acessar a Instância EC2**
+```sh
+ssh -i private-key.pem admin@IP_PUBLICO
+```
+Substitua **`private-key.pem`** pela chave gerada e **`IP_PUBLICO`** pelo IP da saída do Terraform.
 
+#### 📌 **Passo 7 – Testar o Nginx**
+No navegador, acesse:
+```sh
+http://IP_PUBLICO
+```
+Se tudo estiver certo, a **página padrão do Nginx** será exibida! 🎉
 
-Outras melhorias:
+---
 
-Instalação Automática do Nginx → EC2 inicia com Nginx rodando.
+## 🔄 **Como Remover a Infraestrutura**
+Para destruir todos os recursos provisionados, execute:
+```sh
+terraform destroy -auto-approve
+```
+⚠️ **Isso apagará a instância EC2, VPC e demais recursos!**
 
-Restrições no Security Group → SSH liberado somente para IP específico.
+---
 
-Backup Automático → Criado um backup diário da instância com AWS Backup.
+## 🎯 **Conclusão**
 
-Monitoramento → Criado CloudWatch Logs para armazenar logs do Nginx.
+Este projeto automatiza a criação de uma infraestrutura AWS segura e funcional com **Terraform**, instalando e configurando o **Nginx** automaticamente. Além disso, foram aplicadas **melhorias de segurança, backup e monitoramento**.
 
-Código mais organizado → Melhores práticas de Terraform.
-
-
-
-
-
-
-
+Caso tenha dúvidas ou queira contribuir, fique à vontade para abrir um **issue** ou um **pull request**! 🚀
 
